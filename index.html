@@ -138,45 +138,23 @@
     <button id="connectButton">Połącz z urządzeniem</button>
     <div id="output"></div>
 
-    <!-- Sekcja wgrywania plików -->
-    <div class="upload-section">
-        <h2>Wgraj plik .bin</h2>
-        <input type="file" id="fileInput" accept=".bin" multiple />
-        <select id="baudRate">
-            <option value="9600">9600</option>
-            <option value="115200" selected>115200</option>
-            <option value="250000">250000</option>
-            <option value="500000">500000</option>
-        </select>
-        <div class="file-list" id="fileList"></div>
-        <button id="uploadButton">Wgraj pliki</button>
-
-        <!-- Pasek postępu -->
-        <div id="progressContainer">
-            <div id="progressBar"></div>
-        </div>
-    </div>
-
     <script>
-        const connectButton = document.getElementById('connectButton');
-        const fileInput = document.getElementById('fileInput');
-        const uploadButton = document.getElementById('uploadButton');
-        const baudRateSelect = document.getElementById('baudRate');
-        const output = document.getElementById('output');
-        const fileList = document.getElementById('fileList');
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
 
-        let filesToUpload = [];
+        // Pobieranie przycisku i kontenera do wyświetlania danych
+        const connectButton = document.getElementById('connectButton');
+        const output = document.getElementById('output');
 
         // Funkcja do obsługi połączenia z urządzeniem szeregowym
         async function connectToDevice() {
             try {
-                const port = await navigator.serial.requestPort();  // Wybranie portu COM
-                await port.open({ baudRate: parseInt(baudRateSelect.value) });  // Ustawienie prędkości transmisji
+                // Wybranie portu COM
+                const port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 }); // Prędkość transmisji, może być dowolna
 
-                const reader = port.readable.getReader();  // Odczyt danych z portu szeregowego
+                const reader = port.readable.getReader(); // Odczyt danych z portu szeregowego
                 const decoder = new TextDecoder();
+                
+                // Pętla do odczytu danych z urządzenia
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) {
@@ -195,88 +173,9 @@
             }
         }
 
-        // Funkcja do obsługi dodawania plików do listy
-        fileInput.addEventListener('change', () => {
-            const files = fileInput.files;
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                if (file.type === "application/octet-stream" || file.name.endsWith(".bin")) {
-                    filesToUpload.push(file);
-                    updateFileList();
-                } else {
-                    alert('Tylko pliki .bin są dozwolone.');
-                }
-            }
-        });
-
-        // Funkcja do wyświetlania plików w liście
-        function updateFileList() {
-            fileList.innerHTML = "";
-            filesToUpload.forEach((file, index) => {
-                const fileItem = document.createElement('div');
-                fileItem.classList.add('file-item');
-                fileItem.innerHTML = `${file.name} <button onclick="removeFile(${index})">Usuń</button>`;
-                fileList.appendChild(fileItem);
-            });
-        }
-
-        // Funkcja do usuwania pliku z listy
-        function removeFile(index) {
-            filesToUpload.splice(index, 1);
-            updateFileList();
-        }
-
-        // Funkcja do wgrywania plików na ESP
-        async function uploadFiles() {
-            if (filesToUpload.length === 0) {
-                alert('Brak plików do wgrania!');
-                return;
-            }
-
-            progressContainer.style.display = 'block'; // Pokaż pasek postępu
-
-            try {
-                // Połączenie z urządzeniem
-                const port = await navigator.serial.requestPort();
-                await port.open({ baudRate: parseInt(baudRateSelect.value) });
-
-                const totalFiles = filesToUpload.length;
-                for (let i = 0; i < totalFiles; i++) {
-                    const file = filesToUpload[i];
-                    // Symulacja wgrywania pliku (w prawdziwej aplikacji wymaga to odpowiednich metod)
-                    output.innerText += `Wgrywam plik: ${file.name}\n`;
-                    output.scrollTop = output.scrollHeight;
-                    await uploadFileToESP(port, file, i + 1, totalFiles);
-                }
-                output.innerText += 'Wszystkie pliki zostały wgrane.\n';
-            } catch (error) {
-                console.error('Błąd podczas wgrywania plików:', error);
-                output.innerText = 'Błąd podczas wgrywania plików!';
-            }
-        }
-
-        // Symulacja procesu wgrywania pliku (zaktualizowanie paska postępu)
-        async function uploadFileToESP(port, file, currentFileIndex, totalFiles) {
-            const writer = port.writable.getWriter();
-            writer.write(new TextEncoder().encode(`Wgrywam plik: ${file.name}\n`));  // Zastąpienie kodu odpowiednią metodą wgrywania
-            writer.releaseLock();
-
-            // Symulacja opóźnienia wgrywania pliku
-            for (let i = 0; i <= 100; i++) {
-                progressBar.style.width = `${i}%`;
-                progressBar.innerText = `${i}%`;
-                await new Promise(resolve => setTimeout(resolve, 50));  // Symulacja opóźnienia
-            }
-
-            const percentage = ((currentFileIndex) / totalFiles) * 100;
-            progressBar.style.width = `${percentage}%`;
-        }
-
-        // Obsługa kliknięcia przycisku "Połącz z urządzeniem"
+        // Funkcja przypisana do kliknięcia przycisku
         connectButton.addEventListener('click', connectToDevice);
 
-        // Obsługa kliknięcia przycisku "Wgraj pliki"
-        uploadButton.addEventListener('click', uploadFiles);
     </script>
 
 </body>
